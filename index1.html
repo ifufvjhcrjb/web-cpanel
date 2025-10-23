@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Buat Server Otomatis • Kaii Panel</title>
+    <style>
+      body { font-family: Poppins, sans-serif; background: #f1f5f9; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+      .box { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
+      input, button { width: 100%; padding: 10px; margin: 6px 0; border-radius: 8px; border: 1px solid #ccc; }
+      button { background: #2563eb; color: white; font-weight: 600; cursor: pointer; }
+      pre { background: #f3f4f6; padding: 10px; border-radius: 8px; overflow: auto; font-size: 12px; }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <h2>🚀 Buat Server Pterodactyl</h2>
+      <p>Isi username & email untuk buat server otomatis</p>
+      <form id="form">
+        <input type="text" id="username" placeholder="Username" required />
+        <input type="email" id="email" placeholder="Email" required />
+        <button type="submit">Buat Server</button>
+      </form>
+      <div id="result"></div>
+    </div>
+
+    <script>
+      const backend = "https://panelix.resellergaming-official.my.id"; // ganti ke domain/api kamu
+
+      document.getElementById("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const username = document.getElementById("username").value;
+        const email = document.getElementById("email").value;
+        const result = document.getElementById("result");
+        result.innerHTML = "⏳ Membuat user...";
+
+        try {
+          const userRes = await fetch(`${backend}/api/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email }),
+          });
+          const userData = await userRes.json();
+          if (!userRes.ok) throw userData;
+          const userId =
+            userData.data?.attributes?.id ||
+            userData.data?.id ||
+            userData.id ||
+            userData.attributes?.id;
+          result.innerHTML = "✅ User dibuat, lanjut buat server...";
+
+          const serverRes = await fetch(`${backend}/api/servers`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user: userId, name: `Server-${username}` }),
+          });
+          const serverData = await serverRes.json();
+          if (!serverRes.ok) throw serverData;
+
+          result.innerHTML =
+            "🎉 Server berhasil dibuat!<pre>" +
+            JSON.stringify(serverData, null, 2) +
+            "</pre>";
+        } catch (err) {
+          result.innerHTML =
+            "❌ Error:<pre>" + JSON.stringify(err, null, 2) + "</pre>";
+        }
+      });
+    </script>
+  </body>
+</html>
