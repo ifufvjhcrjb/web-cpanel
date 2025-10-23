@@ -1,200 +1,171 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Buat Panel (Client-side)</title>
-  <style>
-    body { font-family: Inter, system-ui, sans-serif; background:#0f172a; color:#e6eef8; padding:20px; }
-    .card { background:#0b1220; border-radius:12px; padding:18px; margin:10px 0; box-shadow:0 6px 30px rgba(2,6,23,0.6); }
-    label { display:block; margin-top:10px; font-size:14px; color:#9fb0d6 }
-    input, select, button, textarea { width:100%; padding:10px; margin-top:6px; border-radius:8px; border:1px solid #17324a; background:#031022; color:#dbeefe; }
-    button { cursor:pointer; border:0; background:linear-gradient(90deg,#06b6d4,#7c3aed); font-weight:600; }
-    pre { background:#021021; padding:12px; border-radius:8px; overflow:auto; color:#bfe8ff }
-    .row { display:flex; gap:10px; }
-    .col { flex:1; }
-    .small { font-size:13px; color:#8fb0d6 }
-    .ok { color:#7ef3a2 }
-    .err { color:#ff9b9b }
-  </style>
-</head>
-<body>
-  <h2>Auto Create Panel — Client-side (Demo)</h2>
-
-  <div class="card">
-    <label>Panel Domain (tanpa slash akhir)</label>
-    <input id="domain" placeholder="https://panelix.resellergaming-official.my.id" value="https://panelix.resellergaming-official.my.id" />
-
-    <label>Application API Key (paste di sini)</label>
-    <input id="apiKey" placeholder="Bearer API_KEY..." />
-
-    <div class="row" style="margin-top:10px;">
-      <div class="col">
-        <label>Nama custom (untuk username)</label>
-        <input id="nama" placeholder="Masukkan nama, mis. kaii" />
-      </div>
-      <div style="width:140px">
-        <label>Paket</label>
-        <select id="paket">
-          <option value="1gb">1GB</option>
-          <option value="2gb">2GB</option>
-          <option value="4gb">4GB</option>
-          <option value="6gb">6GB</option>
-          <option value="8gb">8GB</option>
-          <option value="10gb">10GB</option>
-          <option value="unli">UNLI</option>
-        </select>
-      </div>
-    </div>
-
-    <div style="display:flex; gap:10px; margin-top:12px;">
-      <button id="btnCreate">Buat Panel Sekarang</button>
-      <button id="btnClear" style="background:#334155">Clear Log</button>
-    </div>
-
-    <p class="small">Output:</p>
-    <pre id="log">Ready — isi domain & API key lalu klik "Buat Panel Sekarang"</pre>
-  </div>
-
-  <script>
-    // ===== util =====
-    function log(txt, type='') {
-      const pre = document.getElementById('log');
-      const time = new Date().toLocaleTimeString();
-      pre.textContent = `[${time}] ${txt}\n\n` + pre.textContent;
-      if (type === 'err') pre.style.borderLeft = '4px solid #ff7b7b';
-    }
-
-    function sanitize(name) {
-      return name.replace(/[^a-zA-Z0-9._-]/g, "").toLowerCase();
-    }
-
-    function genPassword(uname) {
-      return uname + "001";
-    }
-
-    function specsFor(paket) {
-      const specs = {
-        "1gb": { memo: "1024", cpu: "30", disk: "1024" },
-        "2gb": { memo: "2048", cpu: "40", disk: "2048" },
-        "4gb": { memo: "4096", cpu: "50", disk: "4096" },
-        "6gb": { memo: "6144", cpu: "60", disk: "6144" },
-        "8gb": { memo: "8192", cpu: "70", disk: "8192" },
-        "10gb": { memo: "10240", cpu: "80", disk: "10240" },
-        "unli": { memo: "0", cpu: "0", disk: "0" }
-      };
-      return specs[paket] || specs["1gb"];
-    }
-
-    // ===== main =====
-    document.getElementById('btnCreate').addEventListener('click', async () => {
-      const domain = (document.getElementById('domain').value || "").replace(/\/+$/,'');
-      const apiKey = document.getElementById('apiKey').value.trim();
-      const namaRaw = document.getElementById('nama').value.trim();
-      const paket = document.getElementById('paket').value;
-
-      if (!domain || !apiKey) return log('Masukkan domain dan API Key sebelum melanjutkan.', 'err');
-      if (!namaRaw) return log('Masukkan nama user yang ingin dibuat.', 'err');
-
-      const uname = sanitize(namaRaw);
-      const email = `${uname}@gmail.com`;
-      const password = genPassword(uname);
-      const conf = specsFor(paket);
-
-      log(`Mulai proses: username=${uname}, paket=${paket}`);
-
-      // header common
-      const headers = {
-        "Authorization": apiKey,
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      };
-
-      try {
-        // 1) ambil daftar user
-        const userRes = await fetch(`${domain}/api/application/users`, { headers });
-        if (!userRes.ok) {
-          const txt = await userRes.text();
-          throw new Error(`Gagal ambil daftar user (${userRes.status}): ${txt}`);
-        }
-        const userList = await userRes.json();
-        const existing = userList.data?.find(u => u.attributes.username === uname);
-        let userId = existing?.attributes?.id;
-        if (userId) log(`User sudah ada (id=${userId}), menggunakan user ini.`);
-
-        // 2) buat user kalau belum ada
-        if (!userId) {
-          log('User belum ada, membuat user baru...');
-          const body = { email, username: uname, first_name: uname, last_name: uname, language: "en", password };
-          const newUser = await fetch(`${domain}/api/application/users`, {
-            method: "POST",
-            headers,
-            body: JSON.stringify(body)
-          });
-
-          const txt = await newUser.text();
-          if (!newUser.ok) throw new Error(`Gagal membuat user (${newUser.status}): ${txt}`);
-
-          const js = JSON.parse(txt);
-          userId = js.attributes?.id;
-          if (!userId) throw new Error(`Tidak mendapatkan user id dari response: ${txt}`);
-          log(`User dibuat (id=${userId})`);
-        }
-
-        // 3) buat server
-        log('Membuat server di panel...');
-        const payload = {
-          name: `${uname}-${paket}`,
-          user: userId,
-          egg: 1, // <-- ganti sesuai settings kamu jika perlu
-          docker_image: "ghcr.io/parkervcp/yolks:nodejs_18",
-          startup: "npm install && npm start",
-          environment: { CMD_RUN: "npm start" },
-          limits: {
-            memory: conf.memo,
-            swap: 0,
-            disk: conf.disk,
-            io: 500,
-            cpu: conf.cpu
-          },
-          feature_limits: { databases: 1, backups: 1, allocations: 1 },
-          deploy: {
-            locations: [1], // <-- ganti sesuai lokasi (settings.loc)
-            dedicated_ip: false,
-            port_range: []
-          },
-          start_on_completion: true
-        };
-
-        const srvRes = await fetch(`${domain}/api/application/servers`, {
-          method: "POST",
-          headers,
-          body: JSON.stringify(payload)
-        });
-
-        const srvTxt = await srvRes.text();
-        if (!srvRes.ok) throw new Error(`Gagal membuat server (${srvRes.status}): ${srvTxt}`);
-
-        const srv = JSON.parse(srvTxt);
-        log('Server berhasil dibuat ✅');
-        log(`Username: ${uname}`);
-        log(`Password: ${password}`);
-        log('Response server (ringkasan):\n' + JSON.stringify(srv, null, 2));
-
-        // tampilkan card summary di atas (sekali lagi) — bisa dikustom tampilannya
-        alert(`Sukses!\nUsername: ${uname}\nPassword: ${password}\nPeriksa log untuk detail server.`);
-      } catch (err) {
-        log('ERROR: ' + (err.message || err), 'err');
-        // Jika error kemungkinan CORS, beri saran
-        if (err.message && /CORS|cross|preflight/i.test(err.message)) {
-          log('Kemungkinan masalah CORS. Jika browser blok request, gunakan backend proxy (Express/Fetch) sebagai perantara.', 'err');
-        }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kaii Panel • Buat Server Otomatis</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --bg: #f1f5f9;
+        --text: #0f172a;
       }
-    });
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Poppins", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+      }
+      .card {
+        background: white;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+      }
+      h1 {
+        font-size: 1.4rem;
+        margin-bottom: 10px;
+      }
+      p {
+        font-size: 0.9rem;
+        color: #475569;
+        margin-bottom: 20px;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        border: 1px solid #cbd5e1;
+        font-size: 0.95rem;
+      }
+      button {
+        width: 100%;
+        padding: 12px;
+        background: var(--primary);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      button:hover {
+        background: #1d4ed8;
+      }
+      .result {
+        margin-top: 20px;
+        font-size: 0.9rem;
+        text-align: left;
+      }
+      pre {
+        background: #f8fafc;
+        padding: 10px;
+        border-radius: 8px;
+        overflow: auto;
+        font-size: 12px;
+        color: #334155;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>🚀 Buat Server Otomatis</h1>
+      <p>Isi username & email untuk membuat akun dan server di panel Kaii</p>
 
-    document.getElementById('btnClear').addEventListener('click', () => {
-      document.getElementById('log').textContent = '';
-    });
-  </script>
-</body>
+      <form id="form">
+        <input
+          type="text"
+          id="username"
+          placeholder="Masukkan username"
+          required
+        />
+        <input
+          type="email"
+          id="email"
+          placeholder="Masukkan email"
+          required
+        />
+        <button type="submit">Buat Sekarang</button>
+      </form>
+
+      <div class="result" id="result"></div>
+    </div>
+
+    <script>
+      const backend = "http://157.245.145.229:2004"; // 🔧 GANTI ke domain/backend kamu jika nanti pakai domain
+
+      document.getElementById("form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const username = document.getElementById("username").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const result = document.getElementById("result");
+
+        if (!username || !email) {
+          result.innerHTML = "⚠️ Harap isi semua kolom.";
+          return;
+        }
+
+        result.innerHTML = "⏳ Membuat user...";
+
+        try {
+          // 🔹 1. Buat user
+          const userRes = await fetch(`${backend}/api/users`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email }),
+          });
+          const userData = await userRes.json();
+          if (!userRes.ok) throw userData;
+
+          const userId =
+            userData?.attributes?.id ||
+            userData?.data?.id ||
+            userData?.id ||
+            userData?.data?.attributes?.id;
+
+          if (!userId) throw { error: "Gagal mendapatkan ID user." };
+
+          result.innerHTML = "✅ User berhasil dibuat. Membuat server...";
+
+          // 🔹 2. Buat server
+          const serverRes = await fetch(`${backend}/api/servers`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              user: userId,
+              name: `Server-${username}`,
+            }),
+          });
+          const serverData = await serverRes.json();
+          if (!serverRes.ok) throw serverData;
+
+          result.innerHTML =
+            "🎉 Server berhasil dibuat!<br><pre>" +
+            JSON.stringify(serverData, null, 2) +
+            "</pre>";
+        } catch (err) {
+          console.error(err);
+          result.innerHTML =
+            "❌ Gagal membuat server:<br><pre>" +
+            JSON.stringify(err, null, 2) +
+            "</pre>";
+        }
+      });
+    </script>
+  </body>
 </html>
