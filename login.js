@@ -1,4 +1,4 @@
-const backend = "/api";
+const backend = "https://157.245.145.229:2004/";
 
 document.getElementById("loginBtn").addEventListener("click", async () => {
   const email = document.getElementById("email").value.trim();
