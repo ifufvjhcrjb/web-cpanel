@@ -1,4 +1,4 @@
-const backend = "/api";
+const backend = "https://157.245.145.229:2004";
 const panelURL = "https://panelix.resellergaming-official.my.id";
 const loginData = JSON.parse(localStorage.getItem("login"));
 
