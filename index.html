@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kaii Panel • Buat Server Otomatis</title>
+    <link rel="stylesheet" href="index.css" />
+  </head>
+  <body>
+    <!-- ⋮ Tombol menu -->
+    <div class="menu-btn" id="menuBtn">⋮</div>
+
+    <!-- Menu dropdown -->
+    <div class="menu" id="menu">
+      <button id="btnDashboard">Dasbor</button>
+      <button id="btnProfile">Profil</button>
+    </div>
+
+    <!-- Card utama -->
+    <div class="card" id="cardContent">
+      <h1>🚀 Buat Server Otomatis</h1>
+      <p>Isi username & pilih kapasitas server yang kamu mau.</p>
+
+      <form id="form">
+        <input type="text" id="username" placeholder="Masukkan username" required />
+        <select id="kapasitas" required>
+          <option value="" disabled selected>💾 Pilih Kapasitas</option>
+          <option value="1">1 GB</option>
+          <option value="2">2 GB</option>
+          <option value="3">3 GB</option>
+          <option value="4">4 GB</option>
+          <option value="5">5 GB</option>
+          <option value="6">6 GB</option>
+          <option value="7">7 GB</option>
+          <option value="8">8 GB</option>
+          <option value="9">9 GB</option>
+          <option value="10">10 GB</option>
+          <option value="unlimited">🔥 Unlimited</option>
+        </select>
+        <button type="submit">Buat Sekarang</button>
+      </form>
+
+      <div class="result" id="result"></div>
+    </div>
+
+    <!-- Profil card (disembunyikan dulu) -->
+    <div class="card hidden" id="profileCard">
+      <h1>👤 Profil Pengguna</h1>
+      <div id="profileData">Memuat data...</div>
+      <button id="backToDashboard">⬅️ Kembali</button>
+    </div>
+
+    <script src="index.js"></script>
+  </body>
+</html>
